@@ -62,6 +62,31 @@ const formatFieldName = (key) =>
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
 
+const Pagination = ({ page, totalPages, onPageChange }) => {
+  if (totalPages <= 1) return null;
+  return (
+    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', padding: '16px 0' }}>
+      <button
+        className="btn btn-ghost btn-sm"
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        &larr; Prev
+      </button>
+      <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+        Page {page} of {totalPages}
+      </span>
+      <button
+        className="btn btn-ghost btn-sm"
+        disabled={page >= totalPages}
+        onClick={() => onPageChange(page + 1)}
+      >
+        Next &rarr;
+      </button>
+    </div>
+  );
+};
+
 const CategoryPage = ({ apiFetch, showToast }) => {
   const { name } = useParams();
   const navigate = useNavigate();
@@ -72,15 +97,37 @@ const CategoryPage = ({ apiFetch, showToast }) => {
   const [showNewForm, setShowNewForm] = useState(false);
   const [aiResult, setAiResult] = useState(null);
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
+
+  // Batch generation
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchCount, setBatchCount] = useState(2);
+  const [batchProgress, setBatchProgress] = useState(null);
+
+  // Collections
+  const [collections, setCollections] = useState([]);
+  const [addToColAsset, setAddToColAsset] = useState(null);
+  const [showColDropdown, setShowColDropdown] = useState(false);
+
   useEffect(() => {
-    loadAssets();
+    loadAssets(1);
+    loadCollections();
   }, [name]);
 
-  const loadAssets = async () => {
+  const loadAssets = async (pageNum = page) => {
     setLoading(true);
     try {
-      const data = await apiFetch(`/api/assets/category/${name}`);
-      setAssets(Array.isArray(data) ? data : data.assets || []);
+      const data = await apiFetch(`/api/assets/category/${name}?page=${pageNum}&limit=20`);
+      if (data && data.data) {
+        setAssets(data.data);
+        setPagination(data.pagination);
+        setPage(pageNum);
+      } else {
+        // fallback for old API
+        setAssets(Array.isArray(data) ? data : []);
+      }
     } catch (err) {
       showToast('Failed to load assets', 'error');
       setAssets([]);
@@ -89,16 +136,60 @@ const CategoryPage = ({ apiFetch, showToast }) => {
     }
   };
 
+  const loadCollections = async () => {
+    try {
+      const data = await apiFetch('/api/collections');
+      setCollections(Array.isArray(data) ? data : []);
+    } catch (err) {
+      // non-fatal
+    }
+  };
+
   const handleGenerate = async () => {
+    if (batchMode) {
+      await handleBatchGenerate();
+      return;
+    }
     setGenerating(true);
     setAiResult(null);
     try {
       const data = await apiFetch(`/api/ai/generate/${name}`, { method: 'POST' });
       setAiResult(data);
       showToast('Asset generated with AI!', 'success');
-      loadAssets();
+      loadAssets(1);
     } catch (err) {
-      showToast(err.message || 'AI generation failed', 'error');
+      if (err.message && err.message.includes('rate limit')) {
+        showToast('AI rate limit exceeded. Max 20 requests/hour. Please wait before generating more.', 'error');
+      } else {
+        showToast(err.message || 'AI generation failed', 'error');
+      }
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleBatchGenerate = async () => {
+    setGenerating(true);
+    setAiResult(null);
+    setBatchProgress({ current: 0, total: batchCount });
+    try {
+      const data = await apiFetch(`/api/ai/generate-batch`, {
+        method: 'POST',
+        body: JSON.stringify({ category: name, count: batchCount }),
+      });
+      setBatchProgress(null);
+      showToast(`Generated ${data.count} assets!`, 'success');
+      loadAssets(1);
+      if (data.generated && data.generated.length > 0) {
+        setAiResult({ batchResults: data.generated, count: data.count });
+      }
+    } catch (err) {
+      setBatchProgress(null);
+      if (err.message && err.message.includes('rate limit')) {
+        showToast('AI rate limit exceeded. Max 20 requests/hour. Please wait before generating more.', 'error');
+      } else {
+        showToast(err.message || 'Batch generation failed', 'error');
+      }
     } finally {
       setGenerating(false);
     }
@@ -109,7 +200,7 @@ const CategoryPage = ({ apiFetch, showToast }) => {
       await apiFetch(`/api/assets/${id}`, { method: 'DELETE' });
       showToast('Asset deleted', 'success');
       setSelectedAsset(null);
-      loadAssets();
+      loadAssets(page);
     } catch (err) {
       showToast('Failed to delete asset', 'error');
     }
@@ -123,7 +214,7 @@ const CategoryPage = ({ apiFetch, showToast }) => {
       });
       showToast('Asset updated', 'success');
       setSelectedAsset(data.asset || data);
-      loadAssets();
+      loadAssets(page);
     } catch (err) {
       showToast('Failed to update asset', 'error');
     }
@@ -137,9 +228,38 @@ const CategoryPage = ({ apiFetch, showToast }) => {
       });
       showToast('Asset created', 'success');
       setShowNewForm(false);
-      loadAssets();
+      loadAssets(1);
     } catch (err) {
       showToast('Failed to create asset', 'error');
+    }
+  };
+
+  const handleExport = () => {
+    const token = localStorage.getItem('token');
+    const url = `/api/assets/export?category=${name}&format=json`;
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.blob())
+      .then((blob) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `assets-${name}.json`;
+        a.click();
+      })
+      .catch(() => showToast('Export failed', 'error'));
+  };
+
+  const handleAddToCollection = async (collectionId) => {
+    try {
+      await apiFetch(`/api/collections/${collectionId}/assets`, {
+        method: 'POST',
+        body: JSON.stringify({ assetId: addToColAsset.id }),
+      });
+      showToast('Added to collection!', 'success');
+    } catch (err) {
+      showToast('Failed to add to collection', 'error');
+    } finally {
+      setShowColDropdown(false);
+      setAddToColAsset(null);
     }
   };
 
@@ -152,19 +272,45 @@ const CategoryPage = ({ apiFetch, showToast }) => {
         <div className="category-title-row">
           <span className="category-page-icon">{CATEGORY_ICONS[name] || '\uD83D\uDCE6'}</span>
           <h1 className="page-title">{formatCategoryName(name)}</h1>
-          <span className="asset-count-badge">{assets.length} assets</span>
+          <span className="asset-count-badge">{pagination.total} assets</span>
         </div>
-        <div className="category-actions">
+        <div className="category-actions" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={handleExport}>
+            &#x2B07; Export JSON
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowNewForm(true)}>
             + New Asset
           </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <input
+                type="checkbox"
+                checked={batchMode}
+                onChange={(e) => setBatchMode(e.target.checked)}
+              />
+              Generate Multiple
+            </label>
+            {batchMode && (
+              <select
+                value={batchCount}
+                onChange={(e) => setBatchCount(Number(e.target.value))}
+                className="form-input"
+                style={{ width: 60, padding: '4px 8px', fontSize: 13 }}
+              >
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            )}
+          </div>
           <button className="btn btn-primary btn-glow" onClick={handleGenerate} disabled={generating}>
             {generating ? (
               <>
-                <span className="spinner-inline"></span> Generating...
+                <span className="spinner-inline"></span>
+                {batchProgress ? ` Generating... (${batchProgress.current}/${batchProgress.total})` : ' Generating...'}
               </>
             ) : (
-              <>\u2728 Generate with AI</>
+              <>{batchMode ? `\u2728 Generate ${batchCount}` : '\u2728 Generate with AI'}</>
             )}
           </button>
         </div>
@@ -174,7 +320,7 @@ const CategoryPage = ({ apiFetch, showToast }) => {
         <div className="ai-generating-overlay">
           <div className="ai-generating-card">
             <div className="spinner spinner-lg"></div>
-            <h3>AI is generating your asset...</h3>
+            <h3>{batchMode ? `Generating ${batchCount} assets with AI...` : 'AI is generating your asset...'}</h3>
             <p>This may take a few seconds</p>
           </div>
         </div>
@@ -183,36 +329,49 @@ const CategoryPage = ({ apiFetch, showToast }) => {
       {aiResult && (
         <div className="ai-result-section">
           <div className="ai-result-header">
-            <h2>\u2728 AI Generated Result</h2>
+            <h2>\u2728 AI Generated Result{aiResult.batchResults ? `s (${aiResult.count})` : ''}</h2>
             <button className="btn btn-ghost btn-sm" onClick={() => setAiResult(null)}>
               \u2715 Dismiss
             </button>
           </div>
 
-          {aiResult.asset && (
-            <div className="ai-result-card">
-              <h3 className="ai-result-name">{aiResult.asset.name}</h3>
-              {aiResult.asset.description && (
-                <p className="ai-result-desc">{aiResult.asset.description}</p>
-              )}
-            </div>
-          )}
-
-          {aiResult.parsed && typeof aiResult.parsed === 'object' && (
-            <div className="ai-fields-grid">
-              {Object.entries(aiResult.parsed).map(([key, value]) => (
-                <div key={key} className="ai-field-card">
-                  <div className="ai-field-label">{formatFieldName(key)}</div>
-                  <div className="ai-field-value">{renderMetadataValue(value)}</div>
+          {aiResult.batchResults ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {aiResult.batchResults.map((r, i) => (
+                <div key={i} className="ai-result-card">
+                  <h3 className="ai-result-name">{r.asset?.name || `Asset ${i + 1}`}{r.error ? ` (Error: ${r.error})` : ''}</h3>
+                  {r.asset?.description && <p className="ai-result-desc">{r.asset.description}</p>}
                 </div>
               ))}
             </div>
-          )}
+          ) : (
+            <>
+              {aiResult.asset && (
+                <div className="ai-result-card">
+                  <h3 className="ai-result-name">{aiResult.asset.name}</h3>
+                  {aiResult.asset.description && (
+                    <p className="ai-result-desc">{aiResult.asset.description}</p>
+                  )}
+                </div>
+              )}
 
-          {aiResult.ai_response && !aiResult.parsed && (
-            <div className="ai-raw-response">
-              <pre>{typeof aiResult.ai_response === 'string' ? aiResult.ai_response : JSON.stringify(aiResult.ai_response, null, 2)}</pre>
-            </div>
+              {aiResult.parsed && typeof aiResult.parsed === 'object' && (
+                <div className="ai-fields-grid">
+                  {Object.entries(aiResult.parsed).map(([key, value]) => (
+                    <div key={key} className="ai-field-card">
+                      <div className="ai-field-label">{formatFieldName(key)}</div>
+                      <div className="ai-field-value">{renderMetadataValue(value)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {aiResult.ai_response && !aiResult.parsed && (
+                <div className="ai-raw-response">
+                  <pre>{typeof aiResult.ai_response === 'string' ? aiResult.ai_response : JSON.stringify(aiResult.ai_response, null, 2)}</pre>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -229,39 +388,95 @@ const CategoryPage = ({ apiFetch, showToast }) => {
           <p>Generate your first asset with AI or create one manually</p>
         </div>
       ) : (
-        <div className="assets-table-wrapper">
-          <table className="assets-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>AI Generated</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assets.map((asset) => (
-                <tr key={asset.id} onClick={() => setSelectedAsset(asset)} className="asset-row">
-                  <td className="asset-name-cell">{asset.name}</td>
-                  <td className="asset-desc-cell">
-                    {asset.description
-                      ? asset.description.length > 80
-                        ? asset.description.slice(0, 80) + '...'
-                        : asset.description
-                      : '--'}
-                  </td>
-                  <td>
-                    <span className={`badge ${asset.ai_generated ? 'badge-ai' : 'badge-manual'}`}>
-                      {asset.ai_generated ? '\u2728 AI' : 'Manual'}
-                    </span>
-                  </td>
-                  <td className="asset-date-cell">
-                    {new Date(asset.created_at).toLocaleDateString()}
-                  </td>
+        <>
+          <div className="assets-table-wrapper">
+            <table className="assets-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>AI Generated</th>
+                  <th>Created</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {assets.map((asset) => (
+                  <tr key={asset.id} onClick={() => setSelectedAsset(asset)} className="asset-row">
+                    <td className="asset-name-cell">{asset.name}</td>
+                    <td className="asset-desc-cell">
+                      {asset.description
+                        ? asset.description.length > 80
+                          ? asset.description.slice(0, 80) + '...'
+                          : asset.description
+                        : '--'}
+                    </td>
+                    <td>
+                      <span className={`badge ${asset.ai_generated ? 'badge-ai' : 'badge-manual'}`}>
+                        {asset.ai_generated ? '\u2728 AI' : 'Manual'}
+                      </span>
+                    </td>
+                    <td className="asset-date-cell">
+                      {new Date(asset.created_at).toLocaleDateString()}
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: 12 }}
+                        onClick={() => {
+                          setAddToColAsset(asset);
+                          setShowColDropdown(true);
+                        }}
+                      >
+                        + Collection
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={(p) => loadAssets(p)}
+          />
+        </>
+      )}
+
+      {showColDropdown && addToColAsset && (
+        <div className="modal-overlay" onClick={() => { setShowColDropdown(false); setAddToColAsset(null); }}>
+          <div className="modal-content" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Add to Collection</h2>
+              <button className="btn-close" onClick={() => { setShowColDropdown(false); setAddToColAsset(null); }}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>
+                Adding: <strong>{addToColAsset.name}</strong>
+              </p>
+              {collections.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)' }}>No collections yet. Create one from the Collections page.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {collections.map((col) => (
+                    <button
+                      key={col.id}
+                      className="btn btn-secondary"
+                      style={{ textAlign: 'left', justifyContent: 'flex-start' }}
+                      onClick={() => handleAddToCollection(col.id)}
+                    >
+                      {col.name} ({col.asset_count} assets)
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => { setShowColDropdown(false); setAddToColAsset(null); }}>Cancel</button>
+            </div>
+          </div>
         </div>
       )}
 
