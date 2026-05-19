@@ -22,6 +22,9 @@ const Navbar = ({ user, onLogout }) => {
           <button className="btn btn-ghost btn-sm" onClick={() => navigate('/ai-tools')}>
             &#x2728; AI Tools
           </button>
+          <button className="btn btn-ghost btn-sm" data-testid="nav-asset-views" onClick={() => navigate('/custom-views')}>
+            &#x1F4CA; Asset Views
+          </button>
         </div>
 
         <div className="navbar-right">
@@ -39,6 +42,7 @@ const Navbar = ({ user, onLogout }) => {
     
         {/* // === Batch 04 Gaps & Frontend Mounts === */}
         <div style={{ borderTop: '1px solid #eee', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
+        <a href="/custom-views" data-testid="sidebar-asset-views" style={{ display: "block", padding: "0.4rem 0.6rem", fontSize: "0.85rem", fontWeight: 600 }}>&#x1F4CA; Asset Views</a>
         <a href="/cf-agentic-asset-pipeline-turning-a-game" style={{ display: "block", padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}>Agentic asset pipeline turning a game de</a>
         <a href="/cf-style-consistency-enforcer-flagging-outl" style={{ display: "block", padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}>Style consistency enforcer flagging outl</a>
         <a href="/cf-performance-optimization-advisor-analyzi" style={{ display: "block", padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}>Performance optimization advisor analyzi</a>

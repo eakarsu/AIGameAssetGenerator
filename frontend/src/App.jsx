@@ -27,6 +27,7 @@ import GapNoPaymentRoyaltyHandling from './pages/GapNoPaymentRoyaltyHandling';
 import GapNoPublicSharingPortfolioPages from './pages/GapNoPublicSharingPortfolioPages';
 import GapNoFileUploadPipelineDetectedBeyond from './pages/GapNoFileUploadPipelineDetectedBeyond';
 import GapNoRealTimeCollaboration from './pages/GapNoRealTimeCollaboration';
+import CustomViewsPage from './pages/CustomViewsPage';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -164,6 +165,10 @@ function App() {
           <Route path="/gap-no-public-sharing-portfolio-pages" element={<GapNoPublicSharingPortfolioPages />} />
           <Route path="/gap-no-file-upload-pipeline-detected-beyond" element={<GapNoFileUploadPipelineDetectedBeyond />} />
           <Route path="/gap-no-real-time-collaboration" element={<GapNoRealTimeCollaboration />} />
+          <Route
+            path="/custom-views"
+            element={token ? <CustomViewsPage apiFetch={apiFetch} showToast={showToast} /> : <Navigate to="/login" />}
+          />
 
         <Route path="*" element={<Navigate to={token ? '/dashboard' : '/login'} />} />
       </Routes>

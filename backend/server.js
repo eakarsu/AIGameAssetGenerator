@@ -57,6 +57,9 @@ app.use('/api/gap-no-public-sharing-portfolio-pages', route_gap_no_public_sharin
 app.use('/api/gap-no-file-upload-pipeline-detected-beyond', route_gap_no_file_upload_pipeline_detected_beyond);
 app.use('/api/gap-no-real-time-collaboration', route_gap_no_real_time_collaboration);
 
+// Custom Views — mounted BEFORE any 404 handler.
+app.use('/api/custom-views', require('./routes/customViews'));
+
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
 });
