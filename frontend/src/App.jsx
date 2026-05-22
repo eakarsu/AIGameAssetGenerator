@@ -6,6 +6,7 @@ import CategoryPage from './pages/CategoryPage';
 import CollectionsPage from './pages/CollectionsPage';
 import AIToolsPage from './pages/AIToolsPage';
 import AssetCollabPage from './pages/AssetCollabPage';
+import SpriteAtlasBudget from './pages/SpriteAtlasBudget';
 import Navbar from './components/Navbar';
 
 // === Batch 04 Gaps & Frontend Mounts ===
@@ -28,6 +29,11 @@ import GapNoPublicSharingPortfolioPages from './pages/GapNoPublicSharingPortfoli
 import GapNoFileUploadPipelineDetectedBeyond from './pages/GapNoFileUploadPipelineDetectedBeyond';
 import GapNoRealTimeCollaboration from './pages/GapNoRealTimeCollaboration';
 import CustomViewsPage from './pages/CustomViewsPage';
+
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
+
+import TimelineView from './pages/TimelineView';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -110,6 +116,10 @@ function App() {
       )}
 
       <Routes>
+        <Route path="/insights/timeline" element={<TimelineView />} />
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
         <Route
           path="/login"
           element={
@@ -144,6 +154,12 @@ function App() {
           path="/asset-collab"
           element={
             token ? <AssetCollabPage apiFetch={apiFetch} showToast={showToast} /> : <Navigate to="/login" />
+          }
+        />
+        <Route
+          path="/sprite-atlas-budget"
+          element={
+            token ? <SpriteAtlasBudget apiFetch={apiFetch} /> : <Navigate to="/login" />
           }
         />
           {/* // === Batch 04 Gaps & Frontend Mounts === */}

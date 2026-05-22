@@ -21,7 +21,7 @@ const route_gap_no_public_sharing_portfolio_pages = require('./routes/gap-no-pub
 const route_gap_no_file_upload_pipeline_detected_beyond = require('./routes/gap-no-file-upload-pipeline-detected-beyond');
 const route_gap_no_real_time_collaboration = require('./routes/gap-no-real-time-collaboration');
 const app = express();
-const PORT = process.env.BACKEND_PORT || 3001;
+const PORT = process.env.BACKEND_PORT && process.env.BACKEND_PORT !== '3001' ? process.env.BACKEND_PORT : 3601;
 
 app.use(cors());
 app.use(express.json());
@@ -37,6 +37,7 @@ app.use('/api/asset-versions', require('./routes/assetVersions'));
 app.use('/api/asset-collab', require('./routes/assetComments'));
 app.use('/api/style-consistency', require('./routes/styleConsistency'));
 app.use('/api/engine-export', require('./routes/engineExportAdvisor'));
+app.use('/api/sprite-atlas-budget', require('./routes/spriteAtlasBudget'));
 
 // Health check
 app.get('/api/health', (req, res) => {
