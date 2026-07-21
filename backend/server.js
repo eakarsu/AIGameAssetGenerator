@@ -60,6 +60,7 @@ app.use('/api/gap-no-real-time-collaboration', route_gap_no_real_time_collaborat
 
 // Custom Views — mounted BEFORE any 404 handler.
 app.use('/api/custom-views', require('./routes/customViews'));
+app.use('/api/governed-asset-production', require('./governance'));
 
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);

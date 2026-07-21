@@ -28,26 +28,6 @@ const Login = ({ onLogin, showToast }) => {
     }
   };
 
-  const handleQuickLogin = async () => {
-    setEmail('demo@game.com');
-    setPassword('password123');
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'demo@game.com', password: 'password123' }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Quick login failed');
-      onLogin(data.user, data.token);
-    } catch (err) {
-      showToast(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="login-page">
       <div className="login-bg-effects">
@@ -116,16 +96,6 @@ const Login = ({ onLogin, showToast }) => {
             )}
           </button>
 
-          {!isRegister && (
-            <button
-              type="button"
-              className="btn btn-accent btn-full"
-              onClick={handleQuickLogin}
-              disabled={loading}
-            >
-              &#x26A1; Quick Login (Demo)
-            </button>
-          )}
         </form>
 
         <div className="login-footer">
