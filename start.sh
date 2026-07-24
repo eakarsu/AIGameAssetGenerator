@@ -42,6 +42,9 @@ migrate() {
 
 start_services() {
   check
+  set -a
+  . ./.env
+  set +a
   [[ -d "$API_DIR/node_modules" && -d "$UI_DIR/node_modules" ]] ||
     { echo "Dependencies are absent. Run locked installs explicitly before startup." >&2; return 1; }
 
@@ -62,7 +65,7 @@ start_services() {
   wait "$api_pid" "$ui_pid"
 }
 
-case "${1:-check}" in
+case "${1:-start}" in
   check) check ;;
   migrate) migrate ;;
   start) start_services ;;
