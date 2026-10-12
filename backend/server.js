@@ -62,6 +62,14 @@ app.use('/api/gap-no-real-time-collaboration', route_gap_no_real_time_collaborat
 app.use('/api/custom-views', require('./routes/customViews'));
 app.use('/api/governed-asset-production', require('./governance'));
 
+
+// Advisory AI reports only; native execution and approval routes stay unchanged.
+const aiWorkspaceSupport = require("./aiWorkspaceAdapters.cjs");
+const aiWorkspaceDatabase = require("./db.js");
+app.use('/api/report-workspace', require("./aiWorkspace.cjs").createAIWorkspaceRouter({
+  pool: aiWorkspaceDatabase, authenticateToken: require("./middleware/auth.js"),
+  aiRateLimiter: aiWorkspaceSupport.createWorkspaceLimiter(), features: require("./aiWorkspaceFeatures.json"),
+}));
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
 });

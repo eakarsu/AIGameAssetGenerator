@@ -22,7 +22,8 @@ const CollectionsPage = ({ apiFetch, showToast }) => {
     setLoading(true);
     try {
       const data = await apiFetch('/api/collections');
-      setCollections(Array.isArray(data) ? data : []);
+      if (!Array.isArray(data)) throw new Error('Collections returned an invalid list.');
+      setCollections(data);
     } catch (err) {
       showToast('Failed to load collections', 'error');
     } finally {
@@ -68,7 +69,8 @@ const CollectionsPage = ({ apiFetch, showToast }) => {
     setViewingCollection(col);
     try {
       const data = await apiFetch(`/api/collections/${col.id}`);
-      setCollectionAssets(data.assets || []);
+      if (!Array.isArray(data?.assets)) throw new Error('Collection assets returned an invalid list.');
+      setCollectionAssets(data.assets);
     } catch (err) {
       showToast('Failed to load collection assets', 'error');
     } finally {

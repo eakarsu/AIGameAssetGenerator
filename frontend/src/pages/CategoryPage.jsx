@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AssetDetail from '../components/AssetDetail';
 import NewAssetForm from '../components/NewAssetForm';
+import AIReport from '../components/AIReport';
 
 const CATEGORY_ICONS = {
   characters: '\uD83E\uDDD9',
@@ -26,41 +27,6 @@ const formatCategoryName = (name) =>
     .split('_')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
-
-const renderMetadataValue = (value) => {
-  if (value === null || value === undefined) return <span className="meta-null">--</span>;
-  if (typeof value === 'boolean')
-    return <span className={`meta-badge ${value ? 'meta-badge-green' : 'meta-badge-red'}`}>{value ? 'Yes' : 'No'}</span>;
-  if (typeof value === 'number')
-    return <span className="meta-number">{value.toLocaleString()}</span>;
-  if (Array.isArray(value))
-    return (
-      <div className="meta-tags">
-        {value.map((item, i) => (
-          <span key={i} className="meta-tag">{String(item)}</span>
-        ))}
-      </div>
-    );
-  if (typeof value === 'object')
-    return (
-      <div className="meta-nested">
-        {Object.entries(value).map(([k, v]) => (
-          <div key={k} className="meta-nested-row">
-            <span className="meta-nested-key">{formatFieldName(k)}:</span>
-            <span className="meta-nested-val">{renderMetadataValue(v)}</span>
-          </div>
-        ))}
-      </div>
-    );
-  return <span className="meta-string">{String(value)}</span>;
-};
-
-const formatFieldName = (key) =>
-  key
-    .replace(/_/g, ' ')
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (s) => s.toUpperCase())
-    .trim();
 
 const Pagination = ({ page, totalPages, onPageChange }) => {
   if (totalPages <= 1) return null;
@@ -120,13 +86,14 @@ const CategoryPage = ({ apiFetch, showToast }) => {
     setLoading(true);
     try {
       const data = await apiFetch(`/api/assets/category/${name}?page=${pageNum}&limit=20`);
-      if (data && data.data) {
+      if (Array.isArray(data?.data)) {
         setAssets(data.data);
         setPagination(data.pagination);
         setPage(pageNum);
+      } else if (Array.isArray(data)) {
+        setAssets(data);
       } else {
-        // fallback for old API
-        setAssets(Array.isArray(data) ? data : []);
+        throw new Error('Assets returned an invalid list.');
       }
     } catch (err) {
       showToast('Failed to load assets', 'error');
@@ -355,21 +322,8 @@ const CategoryPage = ({ apiFetch, showToast }) => {
                 </div>
               )}
 
-              {aiResult.parsed && typeof aiResult.parsed === 'object' && (
-                <div className="ai-fields-grid">
-                  {Object.entries(aiResult.parsed).map(([key, value]) => (
-                    <div key={key} className="ai-field-card">
-                      <div className="ai-field-label">{formatFieldName(key)}</div>
-                      <div className="ai-field-value">{renderMetadataValue(value)}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {aiResult.ai_response && !aiResult.parsed && (
-                <div className="ai-raw-response">
-                  <pre>{typeof aiResult.ai_response === 'string' ? aiResult.ai_response : JSON.stringify(aiResult.ai_response, null, 2)}</pre>
-                </div>
+              {(aiResult.parsed !== undefined || aiResult.ai_response !== undefined) && (
+                <AIReport response={aiResult.parsed ?? aiResult.ai_response} title="Generated asset details" />
               )}
             </>
           )}

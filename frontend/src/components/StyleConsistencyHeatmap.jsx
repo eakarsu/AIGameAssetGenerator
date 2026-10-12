@@ -7,7 +7,10 @@ export default function StyleConsistencyHeatmap({ apiFetch }) {
 
   useEffect(() => {
     apiFetch('/api/custom-views/style-consistency-heatmap')
-      .then(setData)
+      .then((result) => {
+        if (!Array.isArray(result?.attributes) || !Array.isArray(result?.matrix)) throw new Error('Style data returned an invalid list.');
+        setData(result);
+      })
       .catch((e) => setError(e.message));
   }, [apiFetch]);
 
@@ -58,7 +61,7 @@ export default function StyleConsistencyHeatmap({ apiFetch }) {
         </table>
       </div>
       <div style={{ marginTop: 12, fontSize: 12, color: '#94a3b8' }}>
-        Attribute averages: {Object.entries(data.attribute_averages).map(([k, v]) => `${k}=${v}`).join(' · ')}
+        Attribute averages: {Object.entries(data.attribute_averages || {}).map(([k, v]) => `${k}=${v}`).join(' · ')}
       </div>
     </div>
   );

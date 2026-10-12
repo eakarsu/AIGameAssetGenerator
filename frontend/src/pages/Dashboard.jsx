@@ -55,8 +55,9 @@ const Dashboard = ({ apiFetch, showToast }) => {
   const loadCategories = async () => {
     try {
       const data = await apiFetch('/api/assets/categories');
+      if (!Array.isArray(data)) throw new Error('Categories returned an invalid list.');
       const allCategories = Object.keys(CATEGORY_ICONS).map((cat) => {
-        const found = (data || []).find((d) => d.category === cat);
+        const found = data.find((d) => d.category === cat);
         return { category: cat, count: found ? found.count : 0 };
       });
       setCategories(allCategories);

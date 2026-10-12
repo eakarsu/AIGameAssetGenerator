@@ -22,6 +22,7 @@ export default function AssetCollabPage({ apiFetch, showToast }) {
         apiFetch(`/api/asset-collab/${assetId}/comments`),
         apiFetch(`/api/asset-collab/${assetId}/shares`),
       ]);
+      if (![v, c, s].every(Array.isArray)) throw new Error('Collaboration records returned an invalid list.');
       setVersions(v); setComments(c); setShares(s);
     } catch (err) { showToast?.(err.message, 'error'); }
   };

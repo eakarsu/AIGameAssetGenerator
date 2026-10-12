@@ -9,7 +9,8 @@ export default function GenerationRulesEditor({ apiFetch, showToast }) {
   const reload = async () => {
     try {
       const r = await apiFetch('/api/custom-views/generation-rules');
-      setRules(r.rules || []);
+      if (!Array.isArray(r?.rules)) throw new Error('Generation rules returned an invalid list.');
+      setRules(r.rules);
     } catch (e) {
       setError(e.message);
     }

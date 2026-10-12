@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Value } from './AIReport';
 
 const formatFieldName = (key) =>
   key
@@ -21,9 +22,9 @@ const renderMetadataValue = (value) => {
     return (
       <div className="meta-tags">
         {value.map((item, i) => (
-          <span key={i} className="meta-tag">
-            {typeof item === 'object' ? JSON.stringify(item) : String(item)}
-          </span>
+          <div key={i} className="meta-tag">
+            <Value value={item} />
+          </div>
         ))}
       </div>
     );
@@ -38,7 +39,7 @@ const renderMetadataValue = (value) => {
         ))}
       </div>
     );
-  return <span className="meta-string">{String(value)}</span>;
+  return <span className="meta-string">{value === '' ? 'Empty string' : String(value)}</span>;
 };
 
 const AssetDetail = ({ asset, onClose, onDelete, onUpdate }) => {

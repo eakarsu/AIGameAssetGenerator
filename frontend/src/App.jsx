@@ -1,3 +1,4 @@
+import AIReportLibrary from "./components/AIReportLibrary";
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
@@ -103,7 +104,7 @@ function App() {
   );
 
   return (
-    <div className="app">
+    <><AIReportLibrary floating /><div className="app">
       {token && user && <Navbar user={user} onLogout={handleLogout} />}
 
       {toast && (
@@ -188,7 +189,7 @@ function App() {
 
         <Route path="*" element={<Navigate to={token ? '/dashboard' : '/login'} />} />
       </Routes>
-    </div>
+    </div></>
   );
 }
 

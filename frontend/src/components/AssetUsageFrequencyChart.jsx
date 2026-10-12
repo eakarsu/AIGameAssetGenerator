@@ -7,7 +7,10 @@ export default function AssetUsageFrequencyChart({ apiFetch }) {
 
   useEffect(() => {
     apiFetch('/api/custom-views/asset-usage-frequency')
-      .then(setData)
+      .then((result) => {
+        if (!Array.isArray(result?.by_scene) || !Array.isArray(result?.by_level)) throw new Error('Usage data returned an invalid list.');
+        setData(result);
+      })
       .catch((e) => setError(e.message));
   }, [apiFetch]);
 
