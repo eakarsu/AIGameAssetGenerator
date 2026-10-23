@@ -31,6 +31,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/collections', collectionRoutes);
+app.use('/api/tasks', require('./routes/tasks'));
 
 // Apply pass 5 — mechanical additive routes
 app.use('/api/asset-versions', require('./routes/assetVersions'));

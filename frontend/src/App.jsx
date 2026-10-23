@@ -8,6 +8,7 @@ import CollectionsPage from './pages/CollectionsPage';
 import AIToolsPage from './pages/AIToolsPage';
 import AssetCollabPage from './pages/AssetCollabPage';
 import SpriteAtlasBudget from './pages/SpriteAtlasBudget';
+import TasksPage from './pages/TasksPage';
 import Navbar from './components/Navbar';
 
 // === Batch 04 Gaps & Frontend Mounts ===
@@ -118,6 +119,7 @@ function App() {
 
       <Routes>
         <Route path="/insights/timeline" element={<TimelineView />} />
+        <Route path="/tasks" element={<TasksPage />} />
         <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
         <Route path="/codex/operations" element={<CodexOperationsFeature />} />
 

@@ -17,6 +17,10 @@ router.get('/export', authMiddleware, async (req, res) => {
       result = await pool.query('SELECT * FROM assets ORDER BY created_at DESC');
     }
 
+    if (String(req.query.format||'json').toLowerCase()==='csv') {
+      const {toCsv}=require('../domain/taskPolicy');
+      res.setHeader('Content-Disposition','attachment; filename="assets.csv"'); res.setHeader('Content-Type','text/csv'); return res.send(toCsv(result.rows));
+    }
     const filename = category ? `assets-${category}.json` : 'assets-all.json';
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/json');
@@ -110,12 +114,16 @@ router.get('/', authMiddleware, async (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query('SELECT COUNT(*) FROM assets');
+    const search=String(req.query.search||req.query.q||'').trim(); const cat=req.query.category;
+    const where=[]; const params=[];
+    if(search){ params.push(`%${search}%`); where.push(`(name ILIKE $${params.length} OR description ILIKE $${params.length})`); }
+    if(cat){ params.push(cat); where.push(`category=$${params.length}`); }
+    const wc=where.length?` WHERE ${where.join(' AND ')}`:'';
+    const countResult = await pool.query(`SELECT COUNT(*) FROM assets${wc}`,params);
     const total = parseInt(countResult.rows[0].count);
-
     const result = await pool.query(
-      'SELECT * FROM assets ORDER BY created_at DESC LIMIT $1 OFFSET $2',
-      [limit, offset]
+      `SELECT * FROM assets${wc} ORDER BY created_at DESC LIMIT $${params.length+1} OFFSET $${params.length+2}`,
+      [...params, limit, offset]
     );
 
     res.json({
